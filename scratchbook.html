@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scratchbook | Canvas</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --sidebar: #f8f9fa;
+            --text: #1a1a1b;
+            --border: #e2e8f0;
+            --accent: #3b82f6;
+            --canvas-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            --input-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --sidebar: #1e293b;
+            --text: #f1f5f9;
+            --border: #334155;
+            --accent: #60a5fa;
+            --canvas-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            --input-bg: #334155;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* 70% Canvas Area */
+        .canvas-section {
+            flex: 0 0 70%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            position: relative;
+        }
+
+        #canvas-wrapper {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--canvas-shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Inversion Logic for Dark Mode */
+        [data-theme="dark"] #canvas-wrapper {
+            filter: invert(1) hue-rotate(180deg);
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+            background: white;
+        }
+
+        /* 30% Sidebar Area */
+        .sidebar {
+            flex: 0 0 30%;
+            background: var(--sidebar);
+            border-left: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        h1 { font-size: 1.5rem; margin: 0; font-weight: 800; letter-spacing: -0.03em; }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label { font-size: 0.85rem; font-weight: 600; color: var(--text); opacity: 0.8; }
+
+        .toolbar-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+        }
+
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 100%;
+            height: 40px;
+            cursor: pointer;
+            border-radius: 8px;
+            background: none;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+
+        textarea {
+            flex-grow: 1;
+            width: 100%;
+            min-height: 200px;
+            background: var(--input-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            resize: none;
+            outline: none;
+        }
+
+        textarea:focus { border-color: var(--accent); }
+
+        .color-presets {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .preset {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s;
+        }
+
+        .preset:hover { transform: translateY(-2px); }
+
+        .footer {
+            font-size: 0.7rem;
+            opacity: 0.4;
+            text-align: center;
+            margin-top: auto;
+        }
+
+        @media (max-width: 900px) {
+            .app-container { flex-direction: column; }
+            .canvas-section { flex: 0 0 65%; }
+            .sidebar { flex: 0 0 35%; border-left: none; border-top: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+<div class="app-container">
+    <section class="canvas-section">
+        <div id="canvas-wrapper">
+            <canvas id="mainCanvas"></canvas>
+        </div>
+    </section>
+
+    <aside class="sidebar">
+        <h1>Scratchbook</h1>
+
+        <div class="control-group">
+            <label>Brushes & Colors</label>
+            <div class="toolbar-grid">
+                <input type="color" id="colorPicker" value="#1e293b">
+                <div style="display: flex; flex-direction: column; justify-content: center;">
+                    <input type="range" id="brushSize" min="1" max="50" value="4">
+                </div>
+            </div>
+            <div class="color-presets">
+                <div class="preset" style="background: #ef4444;" onclick="setPreset('#ef4444')"></div>
+                <div class="preset" style="background: #10b981;" onclick="setPreset('#10b981')"></div>
+                <div class="preset" style="background: #3b82f6;" onclick="setPreset('#3b82f6')"></div>
+                <div class="preset" style="background: #f59e0b;" onclick="setPreset('#f59e0b')"></div>
+                <div class="preset" style="background: #8b5cf6;" onclick="setPreset('#8b5cf6')"></div>
+                <div class="preset" style="background: #1e293b;" onclick="setPreset('#1e293b')"></div>
+                <div class="preset" style="background: #ffffff; border: 1px solid var(--border);" onclick="setEraser()">🧽</div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Interface Controls</label>
+            <div class="toolbar-grid">
+                <button class="btn" onclick="toggleTheme()">🌓 Mode</button>
+                <button class="btn" onclick="clearCanvas()">🗑️ Clear</button>
+            </div>
+        </div>
+
+        <div class="control-group" style="flex-grow: 1;">
+            <label>Notes & Markings</label>
+            <textarea id="notes" placeholder="Mark down your thoughts here..."></textarea>
+        </div>
+
+        <div class="control-group">
+            <label>Save Drawing</label>
+            <div class="toolbar-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <button class="btn btn-primary" onclick="downloadImage('png')">PNG</button>
+                <button class="btn btn-primary" onclick="downloadImage('jpg')">JPG</button>
+                <button class="btn btn-primary" onclick="downloadSVG()">SVG</button>
+            </div>
+        </div>
+
+        <div class="footer">
+        </div>
+    </aside>
+</div>
+
+<script>
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    const wrapper = document.getElementById('canvas-wrapper');
+    const colorPicker = document.getElementById('colorPicker');
+    const brushSize = document.getElementById('brushSize');
+    const body = document.body;
+
+    let drawing = false;
+    let isEraser = false;
+    let paths = []; // For SVG export support
+
+    function initCanvas() {
+        canvas.width = wrapper.clientWidth;
+        canvas.height = wrapper.clientHeight;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+    }
+
+    function startDrawing(e) {
+        drawing = true;
+        const pos = getPos(e);
+        paths.push({
+            color: isEraser ? '#ffffff' : colorPicker.value,
+            size: brushSize.value,
+            points: [pos]
+        });
+        draw(e);
+    }
+
+    function stopDrawing() {
+        drawing = false;
+        ctx.beginPath();
+    }
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left,
+            y: (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top
+        };
+    }
+
+    function draw(e) {
+        if (!drawing) return;
+
+        const pos = getPos(e);
+        paths[paths.length - 1].points.push(pos);
+
+        ctx.lineWidth = brushSize.value;
+        ctx.strokeStyle = isEraser ? '#ffffff' : colorPicker.value;
+
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+    }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDrawing);
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); }, {passive: false});
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, {passive: false});
+    canvas.addEventListener('touchend', stopDrawing);
+
+    function setPreset(color) {
+        isEraser = false;
+        colorPicker.value = color;
+    }
+
+    function setEraser() {
+        isEraser = true;
+    }
+
+    function clearCanvas() {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        paths = [];
+    }
+
+    function toggleTheme() {
+        const theme = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        body.setAttribute('data-theme', theme);
+    }
+
+    function downloadImage(format) {
+        const link = document.createElement('a');
+        link.download = `scratchbook-${Date.now()}.${format}`;
+        link.href = canvas.toDataURL(format === 'jpg' ? 'image/jpeg' : 'image/png', 0.9);
+        link.click();
+    }
+
+    function downloadSVG() {
+        let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">`;
+        svgContent += `<rect width="100%" height="100%" fill="white"/>`;
+        
+        paths.forEach(path => {
+            if (path.points.length < 2) return;
+            svgContent += `<polyline points="`;
+            path.points.forEach(p => {
+                svgContent += `${p.x},${p.y} `;
+            });
+            svgContent += `" fill="none" stroke="${path.color}" stroke-width="${path.size}" stroke-linecap="round" stroke-linejoin="round" />`;
+        });
+        
+        svgContent += `</svg>`;
+        
+        const blob = new Blob([svgContent], {type: 'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `scratchbook-${Date.now()}.svg`;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    window.addEventListener('resize', () => {
+        const tempImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        initCanvas();
+        ctx.putImageData(tempImage, 0, 0);
+    });
+
+    initCanvas();
+</script>
+</body>
+</html>
